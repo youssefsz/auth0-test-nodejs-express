@@ -8,9 +8,23 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
+const { auth, requiresAuth } = require('express-openid-connect');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Auth0 Configuration
+const auth0Config = {
+  authRequired: false,
+  auth0Logout: true,
+  secret: process.env.AUTH0_SECRET,
+  baseURL: process.env.AUTH0_BASE_URL,
+  clientID: process.env.AUTH0_CLIENT_ID,
+  issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL
+};
+
+// Auth0 middleware (must be before other middleware)
+app.use(auth(auth0Config));
 
 // Security middleware
 app.use(helmet());
@@ -31,9 +45,19 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.get('/', (req, res) => {
   res.json({
-    message: 'Welcome to Express API',
+    message: 'Welcome to Express API with Auth0',
     version: '1.0.0',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    authenticated: req.oidc.isAuthenticated(),
+    user: req.oidc.user || null
+  });
+});
+
+// Protected route example using requiresAuth middleware
+app.get('/profile', requiresAuth(), (req, res) => {
+  res.json({
+    message: 'Protected profile data',
+    user: req.oidc.user
   });
 });
 
